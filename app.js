@@ -1,6 +1,10 @@
 var http = require('http');
 var fs = require('fs');
+var mkdirp = require('mkdirp');
 
+
+var mng = new RegExp('cbo_wpm_mng.*?">(.*?)</select>', 'g');
+var chp = new RegExp('cbo_wpm_chp.*?">(.*?)</select>', 'g');
 
 var options = {
   host: 'www.niceoppai.net',
@@ -20,27 +24,38 @@ var options = {
 }
 var request = http.request(options, function (res) {
   var data = '';
+
   res.on('data', function (chunk) {
     data += chunk;
   });
-  res.on('end', function () {
-    fs.appendFile('./chunk/onepiece-800.txt', data);
 
-    var count = 0;0
-    data.match(/<option value="http:\/\/(.*?)" >(.*?)<\/option>/g).forEach(function(option){
-      var manga = /<option value="(.*?)" >(.*?)<\/option>/g.exec(option);
-      if(manga) {
-        console.log(manga.length, manga[1], manga[2]);
-      } else {
-        count++;
-      }
-    });
-    console.log('err', count);
+  res.on('end', function () {
+
+    var count = 0;
+    var manga = mng.exec(data);
+
+    if(manga) {
+      manga[1].match(/<option.*?<\/option>/g).forEach(function(option){
+        var list = /<option value="http:\/\/www\.niceoppai\.net(.*?)".*?>(.*?)<\/option>/g.exec(option);
+        if(list) {
+          var mName = decodeURI(list[2]),  mPath = decodeURI(list[1]);
+          mkdirp('./niceoppai'+mPath, function(err) { 
+            if(err) console.log('create error', err);
+            
+          });
+        } else {
+          console.log(option);
+          count++;
+        }
+      });
+      console.log('err', count);
+    }
     // fs.readFile('./chunk/onepiece-800.txt', (err, data) => {
     //   if (err) throw err;
     //   console.log(data);
     // });
   });
+
 });
 request.on('error', function (e) {
     console.log(e.message);
