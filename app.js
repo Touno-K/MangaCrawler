@@ -36,13 +36,29 @@ var request = function(pathname) {
 }
 
 
+var download = function(url) {
+  var deferred = Q.defer();
+  var req = http.request(options(pathname), function (res) {
+    var data = '';
+    res.on('data', function (chunk) { data += chunk; });
+    res.on('end', function () { deferred.resolve(data); });
+  });
+  req.on('error', function (e) { deferred.reject(e.message); });
+  req.end();
+  return deferred.promise;
+}
 
-var mng = new RegExp('cbo_wpm_mng.*?">(.*?)</select>', 'g');
-var chp = new RegExp('cbo_wpm_chp.*?">(.*?)</select>', 'g');
+
+
+var RegManga = new RegExp('cbo_wpm_mng.*?>(.*?)</select>', 'g');
+var RegChapter = new RegExp('cbo_wpm_chp.*?>(.*?)</select>', 'g');
+var RegImages = new RegExp('<FONT COLOR="WHITE">([\\S\\s]*?)<script type="text/javascript">', 'g');
+
+
 var MangaItems = [];
 request('/giant-killing/169/').then(function(data){
   var count = 0;
-  var manga = mng.exec(data);
+  var manga = RegManga.exec(data);
 
   if(manga) {
     manga[1].match(/<option.*?<\/option>/g).forEach(function(option){
@@ -56,7 +72,36 @@ request('/giant-killing/169/').then(function(data){
     });
     console.log('err', count);
   }
-  
+
+
+  var onExit = false, onNext = true, i = 0;
+  do
+  {
+    if(onNext) {
+      onNext = false;
+      console.log('Downloading... "'+MangaItems[i].name+'"', MangaItems[i].path+'?all');
+      request(MangaItems[i].path+'?all').then(function(data){
+        RegChapter.exec(data)[1].match(/<option.*?<\/option>/g).forEach(function(option){
+          var id = /<option value="(.*?)".*?<\/option>/g.exec(option)[1];
+          var sub = /(\/.*?\/).*?\//g.exec(MangaItems[i].path)[1] + id + '/?all';
+          // if(MangaItems[i].path +'?all' === sub) {
+
+          // } else {
+
+          // }
+        });
+
+        RegImages.exec(data)[1].match(/<img.*?>/g).forEach(function(image){
+          var url = /<img.*?src="(.*?)".*?>/.exec(image)[1];
+          console.log(url);
+        });
+
+        i++;
+        if(i >= MangaItems.length) onExit = true;
+      });
+    }
+  // } while(!onExit);
+  } while(false);
   // fs.readFile('./chunk/onepiece-800.txt', (err, data) => {
   //   if (err) throw err;
   //   console.log(data);
