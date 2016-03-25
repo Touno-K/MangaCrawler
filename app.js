@@ -29,8 +29,11 @@ var request = http.request(options, function (res) {
 
     });
 
-    var manga = data.match(/<option value="(.*?)" >(.*?)<\/option>/ig);
-    console.log(manga[3]);
+    var getList = new RegExp('<option value="(http://www.niceoppai.net/.*?)" >(.*?)<\/option>', 'ig');
+    data.match(getList).forEach(function(option){
+      var manga = getList.exec(option);
+      if(manga) console.log(manga[1], manga[2]); else cosnole.log(option);
+    });
     // fs.readFile('./chunk/onepiece-800.txt', (err, data) => {
     //   if (err) throw err;
     //   console.log(data);
