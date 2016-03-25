@@ -24,16 +24,18 @@ var request = http.request(options, function (res) {
     data += chunk;
   });
   res.on('end', function () {
+    fs.appendFile('./chunk/onepiece-800.txt', data);
 
-    fs.appendFile('./chunk/onepiece-800.txt', data, (err) => {
-
+    var count = 0;0
+    data.match(/<option value="http:\/\/(.*?)" >(.*?)<\/option>/g).forEach(function(option){
+      var manga = /<option value="(.*?)" >(.*?)<\/option>/g.exec(option);
+      if(manga) {
+        console.log(manga.length, manga[1], manga[2]);
+      } else {
+        count++;
+      }
     });
-
-    var getList = new RegExp('<option value="(http://www.niceoppai.net/.*?)" >(.*?)<\/option>', 'ig');
-    data.match(getList).forEach(function(option){
-      var manga = getList.exec(option);
-      if(manga) console.log(manga[1], manga[2]); else cosnole.log(option);
-    });
+    console.log('err', count);
     // fs.readFile('./chunk/onepiece-800.txt', (err, data) => {
     //   if (err) throw err;
     //   console.log(data);
