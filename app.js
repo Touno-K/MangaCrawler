@@ -54,57 +54,44 @@ request('/giant-killing/169/').then(function(data){
 
   console.log('get manga', MangaItems.length);
   var onExit = false, onNext = true, i = 0, TotalImages = 0, ListExit = false, ListCount = 0, l = 0;
-  do
-  {
-    if(onNext) {
-      onNext = false;
-      console.log('Downloading... '+MangaItems[i].path+'?all');
-      request(MangaItems[i].path+'?all').then(function(data){
-        RegChapter.exec(data)[1].match(/<option.*?<\/option>/g).forEach(function(option){
-          var id = /<option value="(.*?)".*?<\/option>/g.exec(option)[1];
-          var sub = /(\/.*?\/).*?\//g.exec(MangaItems[i].path)[1] + id + '/?all';
-          // if(MangaItems[i].path +'?all' === sub) {
+  MangaItems.forEach(function(item){
+    console.log('Downloading... '+item.path+'?all');
+    request(MangaItems[i].path+'?all').then(function(data){
+      RegChapter.exec(data)[1].match(/<option.*?<\/option>/g).forEach(function(option){
+        var id = /<option value="(.*?)".*?<\/option>/g.exec(option)[1];
+        var sub = /(\/.*?\/).*?\//g.exec(MangaItems[i].path)[1] + id + '/?all';
+        // if(MangaItems[i].path +'?all' === sub) {
 
-          // } else {
+        // } else {
 
-          // }
-        }); 
+        // }
+      }); 
 
-        var ListImages = RegImages.exec(data)[1].match(/<img.*?>/g);
-        TotalImages = ListImages.length;
-        ListImages.forEach(function(image){
-          console.log(image);
-          // if(l < ListImages.length) {
-          var link = /<img.*?src="(.*?)".*?>/.exec(image)[1];
-          var dir = './niceoppai'+MangaItems[i].path;
-          var filename = path.basename(link);
-          fs.exists(dir + filename, (exists) => {
-            if(!exists) {
-              mkdirp(dir, () =>{
-                console.log('make', dir);
-                var file = fs.createWriteStream(dir + filename);
-                http.get(link, (response) => { 
-                  response.pipe(file); 
-                  response.on('end', () => {
-                    console.log(dir, filename);
-                    ListCount++;
-                  });
+      var ListImages = RegImages.exec(data)[1].match(/<img.*?>/g);
+      TotalImages = ListImages.length;
+      ListImages.forEach(function(image){
+        var link = /<img.*?src="(.*?)".*?>/.exec(image)[1];
+        var dir = './niceoppai'+item.path;
+        var filename = path.basename(link);
+        fs.exists(dir + filename, (exists) => {
+          if(!exists) {
+            mkdirp(dir, () =>{
+              console.log('make', dir);
+              var file = fs.createWriteStream(dir + filename);
+              http.get(link, (response) => { 
+                response.pipe(file); 
+                response.on('end', () => {
+                  console.log(dir, filename);
+                  ListCount++;
                 });
               });
-            }
-          });
-          // }
-          l++;
+            });
+          }
         });
-        i++;
-        if(i >= MangaItems.length) onExit = true;
-      }).catch(function(ex){
-        console.log('ex', ex);
       });
-    }
-    if(ListCount == TotalImages && ListCount != 0) onNext = true;
-  } while(!onExit);
-  // } while(false);
+    });
+  // } while(!onExit);
+  });
   // fs.readFile('./chunk/onepiece-800.txt', (err, data) => {
   //   if (err) throw err;
   //   console.log(data);
