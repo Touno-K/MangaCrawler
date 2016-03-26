@@ -1,4 +1,6 @@
 var http = require('http');
+var url = require('url');
+var path = require('path');
 var fs = require('fs');
 var mkdirp = require('mkdirp');
 var Q = require('q')
@@ -34,21 +36,6 @@ var request = function(pathname) {
   req.end();
   return deferred.promise;
 }
-
-
-var download = function(url) {
-  var deferred = Q.defer();
-  var req = http.request(options(pathname), function (res) {
-    var data = '';
-    res.on('data', function (chunk) { data += chunk; });
-    res.on('end', function () { deferred.resolve(data); });
-  });
-  req.on('error', function (e) { deferred.reject(e.message); });
-  req.end();
-  return deferred.promise;
-}
-
-
 
 var RegManga = new RegExp('cbo_wpm_mng.*?>(.*?)</select>', 'g');
 var RegChapter = new RegExp('cbo_wpm_chp.*?>(.*?)</select>', 'g');
@@ -89,11 +76,25 @@ request('/giant-killing/169/').then(function(data){
           // } else {
 
           // }
-        });
+        }); 
 
         RegImages.exec(data)[1].match(/<img.*?>/g).forEach(function(image){
-          var url = /<img.*?src="(.*?)".*?>/.exec(image)[1];
-          console.log(url);
+          var link = /<img.*?src="(.*?)".*?>/.exec(image)[1];
+
+          // download(link, MangaItems[i].path);
+
+          dir = './niceoppai'+dir;
+          fs.exists(dir + filename, (exists) => {
+            if(!exists) {
+              mkdirp(dir, function(){
+                var file = fs.createWriteStream(dir + filename);
+                http.get(link, function(response) { response.pipe(file); });
+              });
+            }
+          });
+
+
+
         });
 
         i++;
@@ -106,4 +107,6 @@ request('/giant-killing/169/').then(function(data){
   //   if (err) throw err;
   //   console.log(data);
   // });
+}).catch(function(ex){
+  console.log('ex', ex);
 });
