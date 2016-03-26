@@ -5,8 +5,9 @@ var fs = require('fs');
 var mkdirp = require('mkdirp');
 var Q = require('q')
 
-var options = function(pathname){
-  return {
+var request = function(pathname) {
+  var deferred = Q.defer();
+  var req = http.request({
     host: 'www.niceoppai.net',
     path: pathname,
     port: 80,
@@ -17,17 +18,9 @@ var options = function(pathname){
       'Cache-Control':'max-age=0',
       'Connection':'keep-alive',
       'Host':'www.niceoppai.net',
-      'If-Modified-Since': new Date().toString().substr(0,28),
-      'Upgrade-Insecure-Requests':'1',
       'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/49.0.2623.87 Safari/537.36'
     }
-  }
-}
-
-var request = function(pathname) {
-  var deferred = Q.defer();
-
-  var req = http.request(options(pathname), function (res) {
+  }, function(res) {
     var data = '';
     res.on('data', function (chunk) { data += chunk; });
     res.on('end', function () { deferred.resolve(data); });
@@ -40,7 +33,6 @@ var request = function(pathname) {
 var RegManga = new RegExp('cbo_wpm_mng.*?>(.*?)</select>', 'g');
 var RegChapter = new RegExp('cbo_wpm_chp.*?>(.*?)</select>', 'g');
 var RegImages = new RegExp('<FONT COLOR="WHITE">([\\S\\s]*?)<script type="text/javascript">', 'g');
-
 
 var MangaItems = [];
 request('/giant-killing/169/').then(function(data){
@@ -60,13 +52,13 @@ request('/giant-killing/169/').then(function(data){
     console.log('err', count);
   }
 
-
-  var onExit = false, onNext = true, i = 0;
+  console.log('get manga', MangaItems.length);
+  var onExit = false, onNext = true, i = 0, TotalImages = 0, ListExit = false, ListCount = 0, l = 0;
   do
   {
     if(onNext) {
       onNext = false;
-      console.log('Downloading... "'+MangaItems[i].name+'"', MangaItems[i].path+'?all');
+      console.log('Downloading... '+MangaItems[i].path+'?all');
       request(MangaItems[i].path+'?all').then(function(data){
         RegChapter.exec(data)[1].match(/<option.*?<\/option>/g).forEach(function(option){
           var id = /<option value="(.*?)".*?<\/option>/g.exec(option)[1];
@@ -78,35 +70,43 @@ request('/giant-killing/169/').then(function(data){
           // }
         }); 
 
-        RegImages.exec(data)[1].match(/<img.*?>/g).forEach(function(image){
+        var ListImages = RegImages.exec(data)[1].match(/<img.*?>/g);
+        TotalImages = ListImages.length;
+        ListImages.forEach(function(image){
+          console.log(image);
+          // if(l < ListImages.length) {
           var link = /<img.*?src="(.*?)".*?>/.exec(image)[1];
-
-          // download(link, MangaItems[i].path);
-
-          dir = './niceoppai'+dir;
+          var dir = './niceoppai'+MangaItems[i].path;
+          var filename = path.basename(link);
           fs.exists(dir + filename, (exists) => {
             if(!exists) {
-              mkdirp(dir, function(){
+              mkdirp(dir, () =>{
+                console.log('make', dir);
                 var file = fs.createWriteStream(dir + filename);
-                http.get(link, function(response) { response.pipe(file); });
+                http.get(link, (response) => { 
+                  response.pipe(file); 
+                  response.on('end', () => {
+                    console.log(dir, filename);
+                    ListCount++;
+                  });
+                });
               });
             }
           });
-
-
-
+          // }
+          l++;
         });
-
         i++;
         if(i >= MangaItems.length) onExit = true;
+      }).catch(function(ex){
+        console.log('ex', ex);
       });
     }
-  // } while(!onExit);
-  } while(false);
+    if(ListCount == TotalImages && ListCount != 0) onNext = true;
+  } while(!onExit);
+  // } while(false);
   // fs.readFile('./chunk/onepiece-800.txt', (err, data) => {
   //   if (err) throw err;
   //   console.log(data);
   // });
-}).catch(function(ex){
-  console.log('ex', ex);
 });
