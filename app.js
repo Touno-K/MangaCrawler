@@ -57,7 +57,16 @@ request('/giant-killing/169/').then(function(data){
   }
   return deferred.promise;
 }).then(function(MangaItems){
-  console.log(MangaItems);
+
+  waterfall(MangaItems.map(function (item) {
+    return function (lastItemResult, nextCallback) {
+      // same execution for each item in the array 
+      var itemResult = doThingsWith(arrayItem, lastItemResult);
+      // results carried along from each to the next 
+      nextCallback(null, itemResult);
+  }}), function (err, result) {
+    // final callback 
+  });
 
 }).catch(function(e){
   console.log('error', e);
